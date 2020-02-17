@@ -1,6 +1,6 @@
 FROM php:7.4-apache
 MAINTAINER Daniel Cascales Romero "devopstech253@gmail.com"
-
+LABEL name="nanih98/wordpress:php7.4-apache"
 
 # persistent dependencies
 RUN set -eux; \
