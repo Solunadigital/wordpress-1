@@ -1,0 +1,128 @@
+version: '3.6'
+services:
+  traefik:
+    container_name: traefik
+    image: traefik:alpine
+    restart: always
+    networks:
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /srv/traefik:/etc/traefik # here is where there are the certificates. You must add them manually. $ vim /srv/traefik/name_of_your_cert.crt ...etc
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: 
+      - --api
+      - --docker=true
+      - --docker.watch=true
+      - --docker.domain=docker.localhost
+      - --docker.exposedbydefault=false
+      - --logLevel=INFO
+      - --entryPoints=Name:http Address::80 Redirect.EntryPoint:https
+      - --defaultentrypoints=http,https
+      - --entryPoints=Name:https Address::443 TLS:/etc/traefik/name_of_your_cert.crt,/etc/traefik/name_of_your_key.key 
+      - --accesslog.filepath=/etc/traefik/traefik_access.log
+      - --traefiklog=true
+      - --traefiklog.filepath=/etc/traefik/traefik_log.log
+    labels:
+      - traefik.frontend.headers.forceSTSHeader=true
+      - traefik.frontend.auth.forward.authResponseHeaders=X-Forwarded-User
+      - traefik.frontend.auth.forward.trustForwardHeader=backend 
+  mariadb:
+    image: mariadb:10.4
+    restart: always
+    hostname: mariadb
+    container_name: mariadb
+    networks:
+      - backend
+    depends_on:
+      - rsyslog
+    labels:
+      - traefik.enable=false
+    logging:
+      driver: syslog
+      options:
+          syslog-address: "udp://127.0.0.1:514"
+          syslog-facility: "daemon"
+          tag: "{{.Name}}"
+    environment:
+      MYSQL_ROOT_PASSWORD: XXXX
+      MYSQL_DATABASE: XXXX
+      MYSQL_USER: XXXX
+      MYSQL_PASSWORD: XXXXXXXXXX
+    volumes:
+      - /srv/mysql:/var/lib/mysql
+  wordpress:
+    image: nanih98/wordpress:php7.4-redis
+    container_name: wordpress
+    hostname: wordpress
+    restart: always
+    networks:
+      - frontend
+      - backend
+    volumes:
+      - /srv/wordpress/html:/var/www/html
+      #- /srv/wordpress/apache2:/etc/apache2
+    logging:
+      driver: syslog
+      options:
+          syslog-address: "udp://127.0.0.1:514"
+          syslog-facility: "daemon"
+          tag: "{{.Name}}"
+    labels:
+      - traefik.enable=true
+      - traefik.port=80
+      - traefik.frontend.rule=Host:www.devopstech.org,devopstech.org
+      - traefik.backend=blog
+      - traefik.frontend.redirect.regex=^https?://devopstech.org/?(.*) # I flipped these from the example to meet my use case
+      - traefik.frontend.redirect.replacement=https://www.devopstech.org$${1}
+      - traefik.frontend.redirect.permanent=true
+      - traefik.frontend.headers.SSLRedirect=true
+      - traefik.frontend.headers.SSLForceHost=true
+      - traefik.frontend.headers.SSLHost=www.devopstech.org
+    depends_on:
+      - mariadb
+    environment:
+      WORDPRESS_DB_HOST: mariadb:3306
+      WORDPRESS_DB_USER: XXXXX
+      WORDPRESS_DB_PASSWORD: XXXXXXXXXX
+      WORDPRESS_DB_NAME: XXXXXXX
+  redis:
+    image: redis:5-alpine
+    container_name: redis
+    restart: always
+    networks:
+      - backend
+    #network_mode: host
+    volumes:
+      - /srv/redis/data:/data
+    command: redis-server --appendonly yes --port 6379 --maxmemory 3gb --maxmemory-policy allkeys-lru --requirepass "XXXXXX"
+  rsyslog:
+    image: nanih98/docker-alpine-rsyslog:latest
+    container_name: rsyslog
+    restart: always
+    network_mode: host
+    logging:
+      driver: syslog
+      options:
+          syslog-address: "udp://127.0.0.1:514"
+          syslog-facility: "daemon"
+          tag: "{{.Name}}"
+    environment:
+        - ROTATE_TIME=daily
+        - ROTATE_NUM=7
+        - ROTATE_MAXSIZE=20M
+    volumes:
+        # Directory where logs are saved
+      - /srv/rsyslog/log/:/var/log/
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+
+networks:
+  frontend:
+    driver: bridge
+    external: true
+  backend:
+    external: false
+    driver: bridge
