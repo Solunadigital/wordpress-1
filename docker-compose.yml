@@ -15,7 +15,7 @@ services:
    wordpress:
      depends_on:
        - db
-     image: nanih98/wordpress:test
+     image: nanih98/wordpress:5.5.1-apache-redis
      container_name: wordpress
      hostname: wordpress
      ports:
