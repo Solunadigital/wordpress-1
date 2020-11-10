@@ -10,8 +10,8 @@ services:
        MYSQL_DATABASE: wordpress
        MYSQL_USER: wordpress
        MYSQL_PASSWORD: wordpress
-     #volumes:
-     #  - /srv/docker/mysql:/var/lib/mysql
+     volumes:
+       - /srv/docker/mysql:/var/lib/mysql
    wordpress:
      depends_on:
        - db
@@ -21,8 +21,8 @@ services:
      ports:
        - "80:80"
      restart: always
-     #volumes:
-     #  - /srv/docker/html:/var/www/html
+     volumes:
+       - /srv/docker/html:/var/www/html
      environment:
        WORDPRESS_DB_HOST: db:3306
        WORDPRESS_DB_USER: wordpress
@@ -34,7 +34,7 @@ services:
      restart: always
      expose:
        - 6379
-     #network_mode: host
-     #volumes:
-     #  - /srv/redis/data:/data
+     network_mode: host
+     volumes:
+       - /srv/redis/data:/data
      command: redis-server --appendonly yes --port 6379 --maxmemory 1gb --maxmemory-policy allkeys-lru #--requirepass "pruebas1234"
