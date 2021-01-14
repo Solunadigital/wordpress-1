@@ -1,5 +1,5 @@
 FROM wordpress:php7.4-apache
-LABEL name="nanih98/php7.4-apache"
+LABEL name="nanih98/wordpress:php7.4-apache"
 
 # Setup upload max filesize
 
