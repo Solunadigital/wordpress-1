@@ -1,4 +1,4 @@
-FROM wordpress:5.5.1-apache
+FROM wordpress:php7.4-apache
 LABEL name="nanih98/wordpress:5.5.1-apache"
 
 # Setup upload max filesize
